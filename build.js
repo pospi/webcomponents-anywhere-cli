@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Build script to turn Svelte components into compiled, ready-to-go, runtime-specific
  * components that can be dropped in to native web, React & Angular projects (and
