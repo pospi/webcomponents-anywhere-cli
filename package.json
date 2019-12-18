@@ -25,5 +25,15 @@
   "bugs": {
     "url": "https://github.com/pospi/svelte-universal-component-compiler/issues"
   },
-  "homepage": "https://github.com/pospi/svelte-universal-component-compiler#readme"
+  "homepage": "https://github.com/pospi/svelte-universal-component-compiler#readme",
+  "dependencies": {
+    "globby": "^10.0.1",
+    "mkdirp-promise": "^5.0.1"
+  },
+  "devDependencies": {
+    "svelte": "3.16.5"
+  },
+  "peerDependencies": {
+    "svelte": "^3.16.5"
+  }
 }
