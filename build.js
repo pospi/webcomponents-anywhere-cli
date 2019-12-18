@@ -162,7 +162,7 @@ function renderError (error) {
   if (error.kind) {
     kind = error.kind
   } else if (typeof stack === 'string') {
-    const m = stack.match(/^([a-zA-Z0-9\_\$]+):\ /)
+    const m = stack.match(/^([a-zA-Z0-9_$]+): /)
     if (m) {
       kind = m[1]
     }
