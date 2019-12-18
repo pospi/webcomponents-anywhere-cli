@@ -6,7 +6,8 @@
  *
  * @see https://github.com/sveltejs/rollup-plugin-svelte/blob/master/index.js
  *
- * @package: HoloREA
+ * @package: svelte-universal-component-compiler
+ * @author:  pospi <pospi@spadgos.com>
  * @since:   2019-12-16
  */
 
