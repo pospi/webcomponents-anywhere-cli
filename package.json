@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "Svelte compiler wrapper that outputs drop-in components that work in common UI frameworks without any configuration.",
   "main": "build.js",
+  "bin": {
+    "svelte-ucc": "build.js"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
