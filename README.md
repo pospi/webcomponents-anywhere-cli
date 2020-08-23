@@ -2,6 +2,37 @@
 
 This is an attempt to implement a framework-agnostic component authoring system by way of a build toolchain that compiles Svelte templates into components that natively work with a range of popular frontend libraries.
 
+**WIP!** functionality incomplete.
+
+## Behaviour
+
+The CLI performs the following operations:
+
+- Loads compiler options from the `svelte.config.js` file in the current working directory.
+- Determines the source directory to search for source Svelte components.
+- Determines the destination base directory for placing the output files.
+- Loads [EJS templates](https://www.npmjs.com/package/ejs) for the output components from the `template-*` directories in this module.
+- Recursively checks for `package.json` files under the source folder, without recursing into `node_modules` directories.
+	- If the `main` field does not point to a `*.svelte` file, the package is skipped.
+
+For each Svelte component package found:
+
+- The contents of its `package.json` file are loaded into a `pkg` template variable.
+- A WebComponent is generated:
+	- A `customElement` build is run and the generated component is output (along with its dependencies) to the destination base folder, under a `wc` subdirectory.
+	- The `template-wc` EJS template files are processed against `pkg` and output to the same directory.
+- A [Sapper](https://sapper.svelte.dev/)-compatible component module is generated:
+	- An `ssr` build is run and the generated component is output to the destination base folder, under an `ssr` subdirectory.
+	- The `template-ssr` EJS template files are processed against `pkg` and output to the same directory.
+- The `package.json` metadata for the generated WebComponent is loaded and made available via the `componentPkg` template variable.
+- Every remaining EJS templates are then processed in turn:
+	- The "component type" of the template (the path suffix as in `template-`**`${templateId}`**) is provided via the `componentType` template variable.
+	- The EJS template files for the component type are processed against `pkg`, `componentPkg` & `componentType`; and output to the destination base folder, under a `componentType` subdirectory.
+
+Upon completion, you will end up with a set of nodejs packages that are wrapped to be natively compatible with various runtimes. Note that the templates are wired up such that the runtime-specific packages depend on the `*-wc` package, so when publishing these you will need to publish the webcomponents prior to the runtime-specific wrappers.
+
+Publish workflows are currently left as an exercise to the reader.
+
 ## Feature goals
 
 - Allow the generation of separate NPM packages for the same component in runtime-dependant flavours (`mycomponentlib`, `mycomponentlib-react`, `mycomponentlib-angular` etc)
