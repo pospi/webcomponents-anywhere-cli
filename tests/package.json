@@ -1,0 +1,27 @@
+{
+  "name": "svelte-ucc-tests",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Tests for Svelte universal component compiler CLI",
+  "main": "index.js",
+  "scripts": {
+    "test": "tape test_*.js **/test_*.js | faucet"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/pospi/svelte-universal-component-compiler.git"
+  },
+  "author": "pospi",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/pospi/svelte-universal-component-compiler/issues"
+  },
+  "homepage": "https://github.com/pospi/svelte-universal-component-compiler#readme",
+  "dependencies": {
+    "svelte-universal-component-compiler": "^0.0.1"
+  },
+  "devDependencies": {
+    "faucet": "0.0.1",
+    "tape": "^5.0.1"
+  }
+}
