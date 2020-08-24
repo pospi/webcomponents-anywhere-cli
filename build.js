@@ -51,7 +51,7 @@ const main = async () => {
 
           compiled = compile(
             processed.toString(),
-            Object.assign({}, config, thisFileOpts, { generate: 'dom', customElement: true }),
+            Object.assign({}, config, thisFileOpts, { generate: 'dom', customElement: true, tag: null }),
           )
           addCompilerWarnings(path, compiled.warnings)
         } catch (err) {
