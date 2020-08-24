@@ -17,13 +17,11 @@ const globby = require('globby')
 const { compile, preprocess } = require('svelte/compiler')
 
 const createErrorContext = require('./errorContext')
+const loadSvelteConfig = require('./loadSvelteConfig')
 
 // :TODO: make config path, build dir and match expression configurable
 
-const globalConfig = require(path.resolve(process.cwd(), 'svelte.config')) // :NOTE: loads from working directory
-const config = Object.assign({}, globalConfig)
-/* eslint dot-notation: 0 */
-delete config['preprocess']
+const { config, preprocessConfig } = loadSvelteConfig(/* :TODO: pass as option */)
 
 const MATCH_PATHS = 'src/views/util/bind-context-agent/*.svelte'
 const BUILD_BASEDIR = path.resolve(process.cwd(), 'build/')
@@ -48,7 +46,7 @@ const main = async () => {
         let compiled
 
         try {
-          const processed = await preprocess(file.toString(), globalConfig.preprocess, thisFileOpts)
+          const processed = await preprocess(file.toString(), preprocessConfig, thisFileOpts)
           addCompilerWarnings(path, processed.warnings)
 
           compiled = compile(
