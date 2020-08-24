@@ -4,10 +4,9 @@
  * components that can be dropped in to native web, React & Angular projects (and
  * potentially others in future) without requiring any bundler / loader configuration.
  *
- * @see https://github.com/sveltejs/rollup-plugin-svelte/blob/master/index.js
+ * @see https://github.com/sveltejs/rollup-plugin-svelte/blob/master/index.js for comparison
  *
  * @package: svelte-universal-component-compiler
- * @author:  pospi <pospi@spadgos.com>
  * @since:   2019-12-16
  */
 
@@ -17,6 +16,8 @@ const mkdir = fs.promises.mkdir
 const globby = require('globby')
 const { compile, preprocess } = require('svelte/compiler')
 
+const createErrorContext = require('./errorContext')
+
 // :TODO: make config path, build dir and match expression configurable
 
 const globalConfig = require(path.resolve(process.cwd(), 'svelte.config')) // :NOTE: loads from working directory
@@ -24,28 +25,12 @@ const config = Object.assign({}, globalConfig)
 /* eslint dot-notation: 0 */
 delete config['preprocess']
 
-const MATCH_PATHS = 'src/**/*.svelte'
+const MATCH_PATHS = 'src/views/util/bind-context-agent/*.svelte'
 const BUILD_BASEDIR = path.resolve(process.cwd(), 'build/')
 
 const main = async () => {
-  let errors = []
   const threads = []
-
-  function addError (messagePrefix, err) {
-    if (messagePrefix) {
-      err.message = `${messagePrefix}: ${err.message}`
-    }
-    errors.push(err)
-  }
-
-  function extractWarnings (path, warnings) {
-    if (warnings && warnings.length) {
-      warnings.forEach(w => {
-        w.message = `Warning: ${w.message}`
-      })
-      errors = errors.concat(warnings)
-    }
-  }
+  const { addError, addCompilerWarnings, outputErrors } = createErrorContext()
 
   // iterate over all Svelte components
   for await (const path of globby.stream(MATCH_PATHS)) {
@@ -64,13 +49,13 @@ const main = async () => {
 
         try {
           const processed = await preprocess(file.toString(), globalConfig.preprocess, thisFileOpts)
-          extractWarnings(path, processed.warnings)
+          addCompilerWarnings(path, processed.warnings)
 
           compiled = compile(
             processed.toString(),
-            Object.assign({}, config, thisFileOpts),
+            Object.assign({}, config, thisFileOpts, { generate: 'dom', customElement: true }),
           )
-          extractWarnings(path, compiled.warnings)
+          addCompilerWarnings(path, compiled.warnings)
         } catch (err) {
           addError('', err)
           return resolve()
@@ -98,15 +83,12 @@ const main = async () => {
     }))
   }
 
-  Promise.all(threads).then(() => {
-    if (errors.length) {
-      console.log('Finished with errors.')
-      console.error('')
-      errors.forEach(renderError)
-    } else {
-      console.log('Compiled successfully.')
-    }
-  })
+  Promise.all(threads)
+    .then(outputErrors)
+    .catch((e) => {
+      addError('Unhandled file processing error', e)
+      outputErrors()
+    })
 }
 
 async function writeComponentFiles (filePath, compiled) {
@@ -137,47 +119,6 @@ function writeFilePromise (filePath, content) {
       resolve()
     })
   })
-}
-
-const RESET = '\x1b[0m'
-const BRIGHT = '\x1b[1m'
-const DIM = '\x1b[2m'
-
-const BG_RED = '\x1b[41m'
-
-const FG_WHITE = '\x1b[37m'
-const FG_YELLOW = '\x1b[33m'
-
-const STYL_LBL = `${BRIGHT}${BG_RED}${FG_WHITE}`
-const STYL_PATH = `${DIM}${FG_WHITE}`
-const STYL_MSG = `${FG_WHITE}`
-const STYL_FRAME = `${FG_YELLOW}`
-
-function renderError (error) {
-  const stack = error.stack
-  const filename = error.filename
-  const message = error.message
-  const frame = error.frame
-  const line = error.start ? error.start.line : ''
-  let kind
-
-  if (error.kind) {
-    kind = error.kind
-  } else if (typeof stack === 'string') {
-    const m = stack.match(/^([a-zA-Z0-9_$]+): /)
-    if (m) {
-      kind = m[1]
-    }
-  }
-
-  console.error(`${STYL_LBL}${kind || 'Error'}${RESET}: ${STYL_PATH}${filename}${line ? `:${line}` : ''}${RESET}`)
-  console.error(`\t${STYL_MSG}${message}${RESET}`)
-  if (frame) {
-    console.error(`${STYL_FRAME}${frame}${RESET}`)
-  } else {
-    console.error(`${STYL_FRAME}${stack}${RESET}`)
-  }
-  console.error()
 }
 
 main()
