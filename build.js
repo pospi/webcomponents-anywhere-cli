@@ -13,7 +13,7 @@
 
 const path = require('path')
 const fs = require('fs')
-const mkdirp = require('mkdirp-promise')
+const mkdir = fs.promises.mkdir
 const globby = require('globby')
 const { compile, preprocess } = require('svelte/compiler')
 
@@ -112,7 +112,7 @@ const main = async () => {
 async function writeComponentFiles (filePath, compiled) {
   const dest = path.resolve(BUILD_BASEDIR, filePath)
 
-  await mkdirp(path.dirname(dest))
+  await mkdir(path.dirname(dest), { recursive: true })
 
   if (compiled.css.code) {
     await writeFilePromise(getFileId(dest, 'css'), compiled.css.code)

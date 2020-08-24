@@ -32,8 +32,7 @@
   "homepage": "https://github.com/pospi/svelte-universal-component-compiler#readme",
   "dependencies": {
     "ejs": "^3.1.5",
-    "globby": "^10.0.1",
-    "mkdirp-promise": "^5.0.1"
+    "globby": "^10.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.7.5",
