@@ -1,4 +1,4 @@
-# Universal WebComponent compiler
+# WebComponents Anywhere command-line compiler
 
 This is an attempt to implement a framework-agnostic component authoring system by way of a build toolchain that compiles vanilla WebComponents and Svelte templates into modules which natively work with a range of popular frontend libraries.
 
