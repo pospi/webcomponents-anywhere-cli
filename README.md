@@ -1,6 +1,6 @@
-# Universal component compiler for Svelte components
+# Universal WebComponent compiler
 
-This is an attempt to implement a framework-agnostic component authoring system by way of a build toolchain that compiles Svelte templates into components that natively work with a range of popular frontend libraries.
+This is an attempt to implement a framework-agnostic component authoring system by way of a build toolchain that compiles vanilla WebComponents and Svelte templates into modules which natively work with a range of popular frontend libraries.
 
 **WIP!** functionality incomplete.
 
@@ -8,28 +8,31 @@ This is an attempt to implement a framework-agnostic component authoring system 
 
 The CLI performs the following operations:
 
-- Loads compiler options from the `svelte.config.js` file in the current working directory.
-- Determines the source directory to search for source Svelte components.
-- Determines the destination base directory for placing the output files.
-- Loads [EJS templates](https://www.npmjs.com/package/ejs) for the output components from the `template-*` directories in this module.
-- Recursively checks for `package.json` files under the source folder, without recursing into `node_modules` directories.
-	- If the `main` field does not point to a `*.svelte` file, the package is skipped.
+- Determines the `SOURCE_DIRECTORY` to search for source Web Components.
+- Determines the `DEST_DIRECTORY` for placing the output files.
+- Loads Svelte compiler options from the `svelte.config.js` file in the current working directory, if present.
+- Loads [EJS templates](https://www.npmjs.com/package/ejs) for the output components from the `template-*` directories in *this* module.
+- Recursively checks for `package.json` files under the `SOURCE_DIRECTORY`, without recursing into `node_modules` directories.
+- For each package found, a `COMPONENT_OUTPUT_DIR` is determined by mapping the package file's path relative to the `DEST_DIRECTORY`.
+- First, build artifacts are written into subdirectories of `COMPONENT_OUTPUT_DIR` according to the type of package detected:
+	- If the `main` field in `package.json` is omitted or points to a `*.js` or `*.mjs` file, the package is assumed to be a ready-to-deploy standards compliant Web Component. <!-- You should set up any other build processes (eg. TypeScript) separately to the use of this module, and simply have them generate the final `main` scripts. -->
+		- All files [referenced in the package](https://docs.npmjs.com/files/package.json#files) are copied to `COMPONENT_OUTPUT_DIR/wc`.
+	- If the `main` field points to a `*.svelte` file, the package is assumed to be a [Svelte](https://svelte.dev) component authored using the Svelte syntax.
+		- All files [referenced in the package](https://docs.npmjs.com/files/package.json#files) are copied to `COMPONENT_OUTPUT_DIR/svelte`.
+		- A Web Component is compiled from the input, and it (along with its dependencies) is written to `COMPONENT_OUTPUT_DIR/wc`. Files [referenced in the package](https://docs.npmjs.com/files/package.json#files) are *also* copied, excluding all `*.svelte` source files.
+		- A [Sapper](https://sapper.svelte.dev/)-compatible component module is also compiled- an `ssr` build is run by the Svelte compiler and the output (along with all dependencies) is written to `COMPONENT_OUTPUT_DIR/ssr`. Files [referenced in the package](https://docs.npmjs.com/files/package.json#files) are *also* copied, excluding all `*.svelte` source files.
+	- **Otherwise, the package is skipped.**
+- Secondly, templates for each of the target component output types are executed to provide wrappers for various web application frameworks:
+	- The contents of the component's `package.json` file are loaded into a `pkg` template variable.
+		- If `pkg.main` points to a `*.svelte` file, EJS templates are processed against the module in order to allow deriving target-specific package manifests from the original:
+			- The `template-wc` EJS template files are processed against `pkg` and output to `COMPONENT_OUTPUT_DIR/wc`, overwriting any existing files.
+			- The `template-ssr` EJS template files are processed against `pkg` and output to `COMPONENT_OUTPUT_DIR/ssr`, overwriting any existing files.
+	- The `package.json` metadata for the resulting generated WebComponent in `COMPONENT_OUTPUT_DIR/wc` is loaded and made available via the `componentPkg` template variable. Note that if the component is a standard Web Component, this will be equivalent to the contents of `pkg`.
+	- Every remaining EJS template is then processed in turn:
+		- The "component type" of the template (the path suffix as in `template-`**`${templateId}`**) is provided via the `componentType` template variable. This will be a string like `'angular'`, `'react'`, `'vue'` etc.
+		- The EJS template files for the component type are processed against `pkg`, `componentPkg` & `componentType`; and output to the destination base folder under a `componentType` subdirectory.
 
-For each Svelte component package found:
-
-- The contents of its `package.json` file are loaded into a `pkg` template variable.
-- A WebComponent is generated:
-	- A `customElement` build is run and the generated component is output (along with its dependencies) to the destination base folder, under a `wc` subdirectory.
-	- The `template-wc` EJS template files are processed against `pkg` and output to the same directory.
-- A [Sapper](https://sapper.svelte.dev/)-compatible component module is generated:
-	- An `ssr` build is run and the generated component is output to the destination base folder, under an `ssr` subdirectory.
-	- The `template-ssr` EJS template files are processed against `pkg` and output to the same directory.
-- The `package.json` metadata for the generated WebComponent is loaded and made available via the `componentPkg` template variable.
-- Every remaining EJS templates are then processed in turn:
-	- The "component type" of the template (the path suffix as in `template-`**`${templateId}`**) is provided via the `componentType` template variable.
-	- The EJS template files for the component type are processed against `pkg`, `componentPkg` & `componentType`; and output to the destination base folder, under a `componentType` subdirectory.
-
-Upon completion, you will end up with a set of nodejs packages that are wrapped to be natively compatible with various runtimes. Note that the templates are wired up such that the runtime-specific packages depend on the `*-wc` package, so when publishing these you will need to publish the webcomponents prior to the runtime-specific wrappers.
+Upon completion, you will end up with a set of nodejs packages that are wrapped to be natively compatible with various runtimes. Note that the templates are wired up such that the runtime-specific packages depend on the `*/wc` package, so when publishing these you will need to publish the webcomponents prior to the runtime-specific wrappers.
 
 Publish workflows are currently left as an exercise to the reader.
 
