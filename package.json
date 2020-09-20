@@ -1,10 +1,10 @@
 {
-  "name": "svelte-universal-component-compiler",
+  "name": "webcomponents-anywhere-cli",
   "version": "0.0.1",
-  "description": "Svelte compiler wrapper that outputs drop-in components that work in common UI frameworks without any configuration.",
+  "description": "Command-line process that converts pure WebComponents and Svelte components into drop-in modules that work in common UI frameworks (React, Angular, Vue etc) without any configuration.",
   "main": "build.js",
   "bin": {
-    "svelte-ucc": "build.js"
+    "bundle-webcomponents": "build.js"
   },
   "scripts": {
     "preinstall": "npx only-allow pnpm",
@@ -12,7 +12,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/pospi/svelte-universal-component-compiler.git"
+    "url": "git+ssh://git@github.com/pospi/webcomponents-anywhere-cli.git"
   },
   "keywords": [
     "Svelte",
@@ -27,9 +27,9 @@
   "author": "pospi",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/pospi/svelte-universal-component-compiler/issues"
+    "url": "https://github.com/pospi/webcomponents-anywhere-cli/issues"
   },
-  "homepage": "https://github.com/pospi/svelte-universal-component-compiler#readme",
+  "homepage": "https://github.com/pospi/webcomponents-anywhere-cli#readme",
   "dependencies": {
     "ejs": "^3.1.5",
     "globby": "^10.0.1"
