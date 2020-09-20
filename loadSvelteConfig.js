@@ -1,7 +1,8 @@
 /**
  * Load up Svelte config file from the provided directory, or process.env.CWD if not specified.
+ * If none is found, returns an empty config.
  *
- * @package: Svelte universal component compiler
+ * @package: WebComponents Anywhere CLI
  * @since:   2020-08-24
  */
 
@@ -17,7 +18,7 @@ module.exports = function loadSvelteConfig (fromDir) {
     /* eslint dot-notation: 0 */
     delete config['preprocess']
   } catch (e) {
-    return {}
+    return { config: {}, preprocessConfig: {} }
   }
   return { config, preprocessConfig }
 }
