@@ -16,11 +16,13 @@ The CLI performs the following operations:
 - For each package found, a `COMPONENT_OUTPUT_DIR` is determined by mapping the package file's path relative to the `DEST_DIRECTORY`.
 - First, build artifacts are written into subdirectories of `COMPONENT_OUTPUT_DIR` according to the type of package detected:
 	- If the `main` field in `package.json` is omitted or points to a `*.js` or `*.mjs` file, the package is assumed to be a ready-to-deploy standards compliant Web Component. <!-- You should set up any other build processes (eg. TypeScript) separately to the use of this module, and simply have them generate the final `main` scripts. -->
-		- All files [referenced in the package](https://docs.npmjs.com/files/package.json#files) are copied to `COMPONENT_OUTPUT_DIR/wc`.
+		- All files [referenced in the package](https://docs.npmjs.com/files/package.json#files) are copied to `COMPONENT_OUTPUT_DIR`.
+		- Nothing else happens to the package. **It is presumed to export a `HTMLElement` class definition as its default export.**
 	- If the `main` field points to a `*.svelte` file, the package is assumed to be a [Svelte](https://svelte.dev) component authored using the Svelte syntax.
-		- All files [referenced in the package](https://docs.npmjs.com/files/package.json#files) are copied to `COMPONENT_OUTPUT_DIR/svelte`.
-		- A Web Component is compiled from the input, and it (along with its dependencies) is written to `COMPONENT_OUTPUT_DIR/wc`. Files [referenced in the package](https://docs.npmjs.com/files/package.json#files) are *also* copied, excluding all `*.svelte` source files.
-		- A [Sapper](https://sapper.svelte.dev/)-compatible component module is also compiled- an `ssr` build is run by the Svelte compiler and the output (along with all dependencies) is written to `COMPONENT_OUTPUT_DIR/ssr`. Files [referenced in the package](https://docs.npmjs.com/files/package.json#files) are *also* copied, excluding all `*.svelte` source files.
+		- All files [referenced in the package](https://docs.npmjs.com/files/package.json#files) are copied to `COMPONENT_OUTPUT_DIR`.
+		- A Web Component is compiled from the `main` source file, and it (along with its dependencies) is written to `COMPONENT_OUTPUT_DIR`.
+		- A [Sapper](https://sapper.svelte.dev/)-compatible component module is also compiled- an `ssr` build is run by the Svelte compiler and the output (along with all dependencies) is written to `COMPONENT_OUTPUT_DIR/ssr`.
+		- **The component is now importable in three flavours:** as a Svelte module (`my-component/myComponent.svelte`), as a standards-compliant WebComponent (`my-component`), and as a Sapper SSR rendering object (`my-component/ssr`).
 	- **Otherwise, the package is skipped.**
 - Secondly, templates for each of the target component output types are executed to provide wrappers for various web application frameworks:
 	- The contents of the component's `package.json` file are loaded into a `pkg` template variable.
@@ -32,9 +34,9 @@ The CLI performs the following operations:
 		- The "component type" of the template (the path suffix as in `template-`**`${templateId}`**) is provided via the `componentType` template variable. This will be a string like `'angular'`, `'react'`, `'vue'` etc.
 		- The EJS template files for the component type are processed against `pkg`, `componentPkg` & `componentType`; and output to the destination base folder under a `componentType` subdirectory.
 
-Upon completion, you will end up with a set of nodejs packages that are wrapped to be natively compatible with various runtimes. Note that the templates are wired up such that the runtime-specific packages depend on the `*/wc` package, so when publishing these you will need to publish the webcomponents prior to the runtime-specific wrappers.
+Upon completion, you will end up with a set of nodejs packages that are wrapped to be natively compatible with various runtimes.
 
-Publish workflows are currently left as an exercise to the reader.
+**Pre-build clean steps and publish workflows are currently left as an exercise to the reader.**
 
 ## Feature goals
 
