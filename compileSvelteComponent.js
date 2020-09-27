@@ -28,8 +28,8 @@ const bindCompileSvelteComponent = (config, preprocessConfig, errorContext) => a
     })
     fileData = fileData.toString()
   } catch (err) {
-    errorContext.addError(`Error reading ${path}`, err)
-    return // always return success, log errors non-fatally & separately
+    err.message = `Error reading ${path}: ${err.message}`
+    throw err
   }
 
   // compile the component
@@ -44,8 +44,8 @@ const bindCompileSvelteComponent = (config, preprocessConfig, errorContext) => a
     )
     errorContext.addCompilerWarnings(path, compiled.warnings)
   } catch (err) {
-    errorContext.addError(`Error compiling ${path}`, err)
-    return // always return success, log errors non-fatally & separately
+    err.message = `Error compiling ${path}: ${err.message}`
+    throw err
   }
 
   if (compiled.css.code) {
