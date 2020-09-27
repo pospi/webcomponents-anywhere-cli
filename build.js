@@ -1,83 +1,91 @@
 #!/usr/bin/env node
 /**
- * Build script to turn Svelte components into compiled, ready-to-go, runtime-specific
+ * Build script to turn WebComponents into compiled, ready-to-go, runtime-specific
  * components that can be dropped in to native web, React & Angular projects (and
  * potentially others in future) without requiring any bundler / loader configuration.
- *
- * @see https://github.com/sveltejs/rollup-plugin-svelte/blob/master/index.js for comparison
  *
  * @package: svelte-universal-component-compiler
  * @since:   2019-12-16
  */
 
 const path = require('path')
-const fs = require('fs')
-const mkdir = fs.promises.mkdir
 const globby = require('globby')
-const { compile, preprocess } = require('svelte/compiler')
 
 const createErrorContext = require('./errorContext')
 const loadSvelteConfig = require('./loadSvelteConfig')
+const bindCompileSvelteComponent = require('./compileSvelteComponent')
+const writeSvelteComponentFiles = require('./writeSvelteComponentFiles')
 
-// :TODO: make config path, build dir and match expression configurable
+const CWD = process.cwd()
+const DEFAULT_OPTS = {
+  outputDir: path.resolve(CWD, 'build/'),
+  inputBaseDir: CWD,
+  svelteConfigDir: CWD,
+}
 
-const { config, preprocessConfig } = loadSvelteConfig(/* :TODO: pass as option */)
+const argv = require('yargs')
+  .usage('Usage: $0 path1, path2, ...pathN [options]')
+  .default(DEFAULT_OPTS)
+  .option('outputDir', {
+    type: 'string',
+    description: 'Path to write build files to. A separate subdirectory tree will be generated for each output target.',
+  })
+  .option('inputBaseDir', {
+    type: 'string',
+    description: 'Base directory to resolve input files against. Used to determine output paths relative to $outputDir.',
+  })
+  .option('svelteConfigDir', {
+    type: 'string',
+    description: 'Path to load Svelte config options from, if different from current working directory',
+  })
+  .demandCommand(1)
+  .demandOption([])
+  .argv
 
-const MATCH_PATHS = 'src/views/util/bind-context-agent/*.svelte'
-const BUILD_BASEDIR = path.resolve(process.cwd(), 'build/')
+const { config, preprocessConfig } = loadSvelteConfig(argv.svelteConfigDir)
+
+const MATCH_PATHS = argv._
+const BUILD_BASEDIR = argv.outputDir
+const INPUT_BASEDIR = path.resolve(CWD, argv.inputBaseDir)
 
 const main = async () => {
   const threads = []
-  const { addError, addCompilerWarnings, outputErrors } = createErrorContext()
 
-  // iterate over all Svelte components
-  for await (const path of globby.stream(MATCH_PATHS)) {
+  const errorContext = createErrorContext()
+  const compileSvelteComponent = bindCompileSvelteComponent(config, preprocessConfig, errorContext)
+  const { addError, outputErrors } = errorContext
+
+  // iterate over all component packages under the source dir, excluding node_modules
+  const globs = MATCH_PATHS.map(
+    p => [
+      path.resolve(CWD, p) + '/**/package.json',
+      '!' + path.resolve(CWD, p) + '/**/node_modules',
+    ],
+  ).flat()
+
+  for await (const pkgPath of globby.stream(globs)) {
+    const modulePath = path.dirname(pkgPath)
+    const destPath = modulePath.replace(new RegExp('^' + INPUT_BASEDIR), BUILD_BASEDIR)
+
     threads.push(new Promise((resolve, reject) => {
-      fs.readFile(path, async (err, file) => {
-        if (err) {
-          addError(`Error reading ${path}`, err)
-          return resolve() // always return success, log errors non-fatally & separately
-        }
+      const pkg = require(pkgPath)
 
-        const thisFileOpts = { filename: path }
-        const cssId = getFileId(path, 'css')
-
-        // compile the component
-        let compiled
-
-        try {
-          const processed = await preprocess(file.toString(), preprocessConfig, thisFileOpts)
-          addCompilerWarnings(path, processed.warnings)
-
-          compiled = compile(
-            processed.toString(),
-            Object.assign({}, config, thisFileOpts, { generate: 'dom', customElement: true, tag: null }),
-          )
-          addCompilerWarnings(path, compiled.warnings)
-        } catch (err) {
-          addError('', err)
-          return resolve()
-        }
-
-        if (compiled.css.code) {
-          // add CSS sourcemap
-          const sourcemapComment = `/*# sourceMappingURL=${compiled.css.map.toUrl()} */`
-          compiled.css.code += `\n${sourcemapComment}`
-
-          // add import of CSS into JS component
-          compiled.js.code = `import ${JSON.stringify(cssId)}\n\n` + compiled.js.code
-        }
-
-        // write assets to disk
-        try {
-          await writeComponentFiles(path, compiled)
-        } catch (err) {
-          addError(`Error writing ${path}`, err)
-        }
-
-        // mark component as completed
-        resolve()
-      })
+      // switch on input module type
+      if (!pkg.main || pkg.main.match(/\.js$/) || pkg.main.match(/\.mjs$/)) {
+        // :TODO:
+        return resolve()
+      } else if (pkg.main.match(/\.svelte$/)) {
+        // :TODO: pre-compile module copy step
+        return compileSvelteComponent(path.resolve(modulePath, pkg.main))
+          .then(compiled => writeSvelteComponentFiles(path.join(destPath, 'index.js'), compiled))
+          .catch(err => {
+            addError(`Error compiling Svelte component in ${pkgPath}`, err)
+          })
+          .finally(resolve)
+      } else {
+        addError(`Ignoring package ${pkg.name}: found in match paths, but unknown contents in ${pkg.main}`)
+        return resolve()
+      }
     }))
   }
 
@@ -87,36 +95,6 @@ const main = async () => {
       addError('Unhandled file processing error', e)
       outputErrors()
     })
-}
-
-async function writeComponentFiles (filePath, compiled) {
-  const dest = path.resolve(BUILD_BASEDIR, filePath)
-
-  await mkdir(path.dirname(dest), { recursive: true })
-
-  if (compiled.css.code) {
-    await writeFilePromise(getFileId(dest, 'css'), compiled.css.code)
-  }
-  if (compiled.js.code) {
-    await writeFilePromise(getFileId(dest, 'js'), compiled.js.code)
-  }
-
-  // :TODO: write JS sourcemap; write CSS sourcemap separately
-}
-
-function getFileId (path, newExt) {
-  return path.replace(/\.svelte$/, `.${newExt}`)
-}
-
-function writeFilePromise (filePath, content) {
-  return new Promise((resolve, reject) => {
-    fs.writeFile(filePath, content, (err, res) => {
-      if (err) {
-        return reject(err)
-      }
-      resolve()
-    })
-  })
 }
 
 main()
