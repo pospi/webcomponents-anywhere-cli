@@ -69,7 +69,7 @@ const main = async () => {
     const modulePath = path.dirname(pkgPath)
     const destPath = modulePath.replace(new RegExp('^' + INPUT_BASEDIR), BUILD_BASEDIR)
 
-    threads.push(new Promise((resolve, reject) => {
+    threads.push((async () => {
       const pkg = require(pkgPath)
 
       // switch on input module type
@@ -77,35 +77,35 @@ const main = async () => {
         //
         // PURE JS COMPONENT MODULE - COPY
         //
-        return copySourcePkgFiles(modulePath, destPath)
-          .catch(err => {
-            addError(`Error bundling WebComponent module in ${pkgPath}`, err)
-          })
-          .finally(resolve)
+        try {
+          await copySourcePkgFiles(modulePath, destPath)
+        } catch (err) {
+          addError(`Error bundling WebComponent module in ${pkgPath}`, err)
+        }
       } else if (pkg.main.match(/\.svelte$/)) {
         //
         // SVELTE COMPONENT MODULE - COPY & COMPILE
         //
         const entrypointPath = path.resolve(modulePath, pkg.main)
-        return copySourcePkgFiles(modulePath, destPath)
-          .then(() =>
-            compileSvelteComponent(entrypointPath)
-              .then(compiled => writeSvelteComponentFiles(path.resolve(destPath, mappedFileExt(pkg.main, 'js')), compiled))
-              .catch(err => {
-                addError(`Error compiling Svelte component in ${pkgPath}`, err)
-              }))
-          .catch(err => {
-            addError(`Error pre-bundling Svelte module in ${pkgPath}`, err)
-          })
-          .finally(resolve)
+        try {
+          await copySourcePkgFiles(modulePath, destPath)
+        } catch (err) {
+          addError(`Error pre-bundling Svelte module in ${pkgPath}`, err)
+        }
+
+        try {
+          const compiled = await compileSvelteComponent(entrypointPath)
+          writeSvelteComponentFiles(path.resolve(destPath, mappedFileExt(pkg.main, 'js')), compiled)
+        } catch (err) {
+          addError(`Error compiling Svelte component in ${pkgPath}`, err)
+        }
       } else {
         //
         // UNKNOWN MODULE TYPE - IGNORE
         //
         addError(`Ignoring package ${pkg.name}: found in match paths, but unknown contents in ${pkg.main}`)
-        return resolve()
       }
-    }))
+    })())
   }
 
   Promise.all(threads)
