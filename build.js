@@ -12,6 +12,8 @@ const path = require('path')
 const globby = require('globby')
 
 const createErrorContext = require('./errorContext')
+const mappedFileExt = require('./mappedFileExt')
+const copySourcePkgFiles = require('./copySourcePkgFiles')
 const loadSvelteConfig = require('./loadSvelteConfig')
 const bindCompileSvelteComponent = require('./compileSvelteComponent')
 const writeSvelteComponentFiles = require('./writeSvelteComponentFiles')
@@ -75,17 +77,25 @@ const main = async () => {
         //
         // PURE JS COMPONENT MODULE - COPY
         //
-        // :TODO:
-        return resolve()
+        return copySourcePkgFiles(modulePath, destPath)
+          .catch(err => {
+            addError(`Error bundling WebComponent module in ${pkgPath}`, err)
+          })
+          .finally(resolve)
       } else if (pkg.main.match(/\.svelte$/)) {
         //
         // SVELTE COMPONENT MODULE - COPY & COMPILE
         //
-        // :TODO: pre-compile module copy step
-        return compileSvelteComponent(path.resolve(modulePath, pkg.main))
-          .then(compiled => writeSvelteComponentFiles(path.join(destPath, 'index.js'), compiled))
+        const entrypointPath = path.resolve(modulePath, pkg.main)
+        return copySourcePkgFiles(modulePath, destPath)
+          .then(() =>
+            compileSvelteComponent(entrypointPath)
+              .then(compiled => writeSvelteComponentFiles(path.resolve(destPath, mappedFileExt(pkg.main, 'js')), compiled))
+              .catch(err => {
+                addError(`Error compiling Svelte component in ${pkgPath}`, err)
+              }))
           .catch(err => {
-            addError(`Error compiling Svelte component in ${pkgPath}`, err)
+            addError(`Error pre-bundling Svelte module in ${pkgPath}`, err)
           })
           .finally(resolve)
       } else {
