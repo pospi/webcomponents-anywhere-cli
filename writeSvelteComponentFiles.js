@@ -7,8 +7,8 @@
 
 const path = require('path')
 const fs = require('fs')
-const mkdir = fs.promises.mkdir
 const mappedFileExt = require('./mappedFileExt')
+const ensureDirectory = require('./ensureDirectory')
 
 function writeFilePromise (filePath, content) {
   return new Promise((resolve, reject) => {
@@ -22,7 +22,7 @@ function writeFilePromise (filePath, content) {
 }
 
 const writeSvelteComponentFiles = async (destPath, compiled) => {
-  await mkdir(path.dirname(destPath), { recursive: true })
+  await ensureDirectory(path.dirname(destPath))
 
   if (compiled.css.code) {
     await writeFilePromise(mappedFileExt(destPath, 'css'), compiled.css.code)
