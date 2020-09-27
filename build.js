@@ -4,7 +4,7 @@
  * components that can be dropped in to native web, React & Angular projects (and
  * potentially others in future) without requiring any bundler / loader configuration.
  *
- * @package: svelte-universal-component-compiler
+ * @package: WebComponents Anywhere CLI
  * @since:   2019-12-16
  */
 
@@ -72,9 +72,15 @@ const main = async () => {
 
       // switch on input module type
       if (!pkg.main || pkg.main.match(/\.js$/) || pkg.main.match(/\.mjs$/)) {
+        //
+        // PURE JS COMPONENT MODULE - COPY
+        //
         // :TODO:
         return resolve()
       } else if (pkg.main.match(/\.svelte$/)) {
+        //
+        // SVELTE COMPONENT MODULE - COPY & COMPILE
+        //
         // :TODO: pre-compile module copy step
         return compileSvelteComponent(path.resolve(modulePath, pkg.main))
           .then(compiled => writeSvelteComponentFiles(path.join(destPath, 'index.js'), compiled))
@@ -83,6 +89,9 @@ const main = async () => {
           })
           .finally(resolve)
       } else {
+        //
+        // UNKNOWN MODULE TYPE - IGNORE
+        //
         addError(`Ignoring package ${pkg.name}: found in match paths, but unknown contents in ${pkg.main}`)
         return resolve()
       }
