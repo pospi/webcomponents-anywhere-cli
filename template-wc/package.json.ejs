@@ -1,0 +1,27 @@
+{
+  "name": "<%= pkg.name %>",
+  "version": "<%= pkg.version %>",
+  "description": "<%= pkg.description %>",
+  "main": "<%= pkg.main.replace(/\.svelte$/, '.js') %>",
+  "scripts": <%- JSON.stringify(Object.assign({
+    postinstall: (pkg.scripts.postinstall ? `${pkg.scripts.postinstall} && ` : '')
+               + 'cd react && npm i && cd .. ',
+  }, pkg.scripts || {})) %>,
+  "dependencies": <%- JSON.stringify(pkg.dependencies || {}) %>,
+  "peerDependencies": <%- JSON.stringify(pkg.peerDependencies || {}) %>,
+<% if (pkg.devDependencies) { %>
+  "devDependencies": <%- JSON.stringify(pkg.devDependencies) %>,
+<% } %>
+  "repository": <%- JSON.stringify(pkg.repository) %>,
+<% if (pkg.bugs) { %>
+  "bugs": <%- JSON.stringify(pkg.bugs) %>,
+<% } %>
+<% if (pkg.homepage) { %>
+  "homepage": "<%= pkg.homepage %>",
+<% } %>
+<% if (pkg.keywords) { %>
+  "keywords": <%- JSON.stringify(pkg.keywords) %>,
+<% } %>
+  "author": "<%= pkg.author %>",
+  "license": "<%= pkg.license %>"
+}

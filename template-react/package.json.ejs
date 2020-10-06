@@ -1,0 +1,23 @@
+{
+  "name": "<%= componentPkg.name %>-react",
+  "version": "<%= componentPkg.version %>",
+  "description": "<%= componentPkg.description %> (React wrapper)",
+  "dependencies": {
+    "<%= componentPkg.name %>": "../"
+  },
+  "peerDependencies": {
+    "react": ">=1"
+  },
+  "repository": <%- JSON.stringify(componentPkg.repository) %>,
+<% if (componentPkg.bugs) { %>
+  "bugs": <%- JSON.stringify(componentPkg.bugs) %>,
+<% } %>
+<% if (componentPkg.homepage) { %>
+  "homepage": "<%= componentPkg.homepage %>",
+<% } %>
+<% if (componentPkg.keywords) { %>
+  "keywords": <%- JSON.stringify(componentPkg.keywords) %>,
+<% } %>
+  "author": "<%= componentPkg.author %>",
+  "license": "<%= componentPkg.license %>"
+}
