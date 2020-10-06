@@ -8,6 +8,7 @@
  */
 
 const fs = require('fs')
+const readFile = fs.promises.readFile
 const { compile, preprocess } = require('svelte/compiler')
 const mappedFileExt = require('./mappedFileExt')
 
@@ -18,15 +19,7 @@ const bindCompileSvelteComponent = (config, preprocessConfig, errorContext) => a
   // load the input file
   let fileData
   try {
-    fileData = await new Promise((resolve, reject) => {
-      fs.readFile(path, async (err, data) => {
-        if (err) {
-          return reject(err)
-        }
-        resolve(data.toString())
-      })
-    })
-    fileData = fileData.toString()
+    fileData = (await readFile(path)).toString()
   } catch (err) {
     err.message = `Error reading ${path}: ${err.message}`
     throw err
