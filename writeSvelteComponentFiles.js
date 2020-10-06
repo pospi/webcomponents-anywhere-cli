@@ -7,19 +7,9 @@
 
 const path = require('path')
 const fs = require('fs')
+const writeFilePromise = fs.promises.writeFile
 const mappedFileExt = require('./mappedFileExt')
 const ensureDirectory = require('./ensureDirectory')
-
-function writeFilePromise (filePath, content) {
-  return new Promise((resolve, reject) => {
-    fs.writeFile(filePath, content, (err, res) => {
-      if (err) {
-        return reject(err)
-      }
-      resolve()
-    })
-  })
-}
 
 const writeSvelteComponentFiles = async (destPath, compiled) => {
   await ensureDirectory(path.dirname(destPath))
