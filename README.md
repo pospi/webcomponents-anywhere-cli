@@ -4,6 +4,27 @@ This is an attempt to implement a framework-agnostic component authoring system 
 
 **WIP!** functionality incomplete.
 
+<!-- MarkdownTOC -->
+
+- [Authoring compatible modules](#authoring-compatible-modules)
+- [Behaviour](#behaviour)
+- [Feature goals](#feature-goals)
+- [License](#license)
+
+<!-- /MarkdownTOC -->
+
+## Authoring compatible modules
+
+For your UI components to be recognised and correctly processed by this tool, please ensure that there is a `package.json` file in each module folder that you wish to be processed. The `main` field of each package file should reference either a JavaScript module containing a raw WebComponent (authored using any JS framework of your choice); or a raw Svelte component ready to be processed by the Svelte compiler.
+
+Since the goal of this tool is to reduce integration complexity, there are a few other aspects you should be aware of if you use a more advanced build setup:
+
+- WebComponent modules are copied as-is. Svelte modules are compiled to WebComponents, *but dependencies are not*. This means that:
+	- Neither module type is bundled upon compiling. The intention is to make components ready to drop in to a commonjs-compatible project&mdash; it is expected that the integrating project will perform any bundling as part of its own publish workflow.
+	- Any additional bundler configuration for non-native source file types (eg. TypeScript) must be replicated by consumers of your compiled WebComponent modules *as well as* consumers of the Svelte version. This increases integration complexity.
+
+**For these reasons, we recommend that you run any pre-compile steps needed to generate pure-JS versions of your component dependencies *before* running this build script**, and reference the `*.js` version of all related modules from your component files rather than other source file formats.
+
 ## Behaviour
 
 The CLI performs the following operations:
@@ -21,15 +42,14 @@ The CLI performs the following operations:
 	- If the `main` field points to a `*.svelte` file, the package is assumed to be a [Svelte](https://svelte.dev) component authored using the Svelte syntax.
 		- All files [referenced in the package](https://docs.npmjs.com/files/package.json#files) are copied to `COMPONENT_OUTPUT_DIR`.
 		- A Web Component is compiled from the `main` source file, and it (along with its dependencies) is written to `COMPONENT_OUTPUT_DIR`.
-		- A [Sapper](https://sapper.svelte.dev/)-compatible component module is also compiled- an `ssr` build is run by the Svelte compiler and the output (along with all dependencies) is written to `COMPONENT_OUTPUT_DIR/ssr`.
-		- **The component is now importable in three flavours:** as a Svelte module (`my-component/myComponent.svelte`), as a standards-compliant WebComponent (`my-component`), and as a Sapper SSR rendering object (`my-component/ssr`).
+		- A [Sapper](https://sapper.svelte.dev/)-compatible component module is also compiled- an `ssr` build is run by the Svelte compiler and the output (along with all dependencies) is written to `COMPONENT_OUTPUT_DIR/ssr`. The filename is the same as that generated for the Web Component version.
+		- **The component is now importable in three flavours:** as a Svelte module, as a standards-compliant WebComponent, and as a Sapper SSR rendering object.
 	- **Otherwise, the package is skipped.**
 - Secondly, templates for each of the target component output types are executed to provide wrappers for various web application frameworks:
-	- The contents of the component's `package.json` file are loaded into a `pkg` template variable.
-		- If `pkg.main` points to a `*.svelte` file, EJS templates are processed against the module in order to allow deriving target-specific package manifests from the original:
-			- The `template-wc` EJS template files are processed against `pkg` and output to `COMPONENT_OUTPUT_DIR/wc`, overwriting any existing files.
-			- The `template-ssr` EJS template files are processed against `pkg` and output to `COMPONENT_OUTPUT_DIR/ssr`, overwriting any existing files.
-	- The `package.json` metadata for the resulting generated WebComponent in `COMPONENT_OUTPUT_DIR/wc` is loaded and made available via the `componentPkg` template variable. Note that if the component is a standard Web Component, this will be equivalent to the contents of `pkg`.
+	- The contents of the component's `package.json` file is loaded into a `pkg` template variable.
+	- The `template-wc` EJS template files are processed against `pkg` and output to `COMPONENT_OUTPUT_DIR`, overwriting any existing files.
+	- The `package.json` metadata for the resulting generated WebComponent in `COMPONENT_OUTPUT_DIR` is loaded and made available via the `componentPkg` template variable.
+	- If the original package was a Svelte module, the `template-ssr` EJS template files are processed against `pkg` and output to `COMPONENT_OUTPUT_DIR/ssr`, overwriting any existing files.
 	- Every remaining EJS template is then processed in turn:
 		- The "component type" of the template (the path suffix as in `template-`**`${templateId}`**) is provided via the `componentType` template variable. This will be a string like `'angular'`, `'react'`, `'vue'` etc.
 		- The EJS template files for the component type are processed against `pkg`, `componentPkg` & `componentType`; and output to the destination base folder under a `componentType` subdirectory.
