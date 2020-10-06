@@ -18,6 +18,7 @@ const loadSvelteConfig = require('./loadSvelteConfig')
 const bindCompileSvelteComponent = require('./compileSvelteComponent')
 const writeSvelteComponentFiles = require('./writeSvelteComponentFiles')
 const loadTemplates = require('./loadTemplates')
+const processTemplates = require('./processTemplates')
 
 const CWD = process.cwd()
 const DEFAULT_OPTS = {
@@ -66,6 +67,9 @@ const main = async () => {
 
   // load up templates for rendering component variants
   const templates = await loadTemplates(TEMPLATES_DIR)
+  const wcTemplates = templates.wc
+  /* eslint dot-notation: 0 */
+  delete templates['wc']
 
   // iterate over all component packages under the source dir, excluding node_modules
   const globs = MATCH_PATHS.map(
@@ -91,6 +95,7 @@ const main = async () => {
           await copySourcePkgFiles(modulePath, destPath)
         } catch (err) {
           addError(`Error bundling WebComponent module in ${pkgPath}`, err)
+          return
         }
       } else if (pkg.main.match(/\.svelte$/)) {
         //
@@ -101,6 +106,7 @@ const main = async () => {
           await copySourcePkgFiles(modulePath, destPath)
         } catch (err) {
           addError(`Error pre-bundling Svelte module in ${pkgPath}`, err)
+          return
         }
 
         try {
@@ -108,12 +114,36 @@ const main = async () => {
           writeSvelteComponentFiles(path.resolve(destPath, mappedFileExt(pkg.main, 'js')), compiled)
         } catch (err) {
           addError(`Error compiling Svelte component in ${pkgPath}`, err)
+          return
         }
       } else {
         //
         // UNKNOWN MODULE TYPE - IGNORE
         //
         addError(`Ignoring package ${pkg.name}: found in match paths, but unknown contents in ${pkg.main}`)
+        return
+      }
+
+      // Module is now compiled in build folder & ready to wrap / bundle.
+
+      //
+      // ALL MODULE TYPES - FINALISE WEBCOMPONENT MODULE
+      //
+      try {
+        await processTemplates(destPath, { wc: wcTemplates }, { pkg })
+      } catch (err) {
+        addError(`Error generating templates for ${pkgPath}`, err)
+      }
+
+      //
+      // ALL MODULE TYPES - GENERATE PER-FRAMEWORK WRAPPERS
+      //
+      try {
+        const componentPkgPath = path.resolve(destPath, 'package.json')
+        const componentPkg = require(componentPkgPath) // :NOTE: use final generated package file
+        await processTemplates(destPath, templates, { pkg, componentPkg })
+      } catch (err) {
+        addError(`Error generating templates for ${pkgPath}`, err)
       }
     })())
   }
