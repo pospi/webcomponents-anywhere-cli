@@ -133,6 +133,7 @@ const main = async () => {
         await processTemplates(destPath, { wc: wcTemplates }, { pkg })
       } catch (err) {
         addError(`Error generating templates for ${pkgPath}`, err)
+        return
       }
 
       //
