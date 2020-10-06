@@ -17,12 +17,14 @@ const copySourcePkgFiles = require('./copySourcePkgFiles')
 const loadSvelteConfig = require('./loadSvelteConfig')
 const bindCompileSvelteComponent = require('./compileSvelteComponent')
 const writeSvelteComponentFiles = require('./writeSvelteComponentFiles')
+const loadTemplates = require('./loadTemplates')
 
 const CWD = process.cwd()
 const DEFAULT_OPTS = {
   outputDir: path.resolve(CWD, 'build/'),
   inputBaseDir: CWD,
   svelteConfigDir: CWD,
+  templatesDir: null,
 }
 
 const argv = require('yargs')
@@ -40,6 +42,10 @@ const argv = require('yargs')
     type: 'string',
     description: 'Path to load Svelte config options from, if different from current working directory',
   })
+  .option('templatesDir', {
+    type: 'string',
+    description: 'Path to load bundler template files from. This can be used to override the output of the compiler- see README for more details.',
+  })
   .demandCommand(1)
   .demandOption([])
   .argv
@@ -49,6 +55,7 @@ const { config, preprocessConfig } = loadSvelteConfig(argv.svelteConfigDir)
 const MATCH_PATHS = argv._
 const BUILD_BASEDIR = argv.outputDir
 const INPUT_BASEDIR = path.resolve(CWD, argv.inputBaseDir)
+const TEMPLATES_DIR = argv.templatesDir ? path.resolve(CWD, argv.templatesDir) : __dirname
 
 const main = async () => {
   const threads = []
@@ -56,6 +63,9 @@ const main = async () => {
   const errorContext = createErrorContext()
   const compileSvelteComponent = bindCompileSvelteComponent(config, preprocessConfig, errorContext)
   const { addError, outputErrors } = errorContext
+
+  // load up templates for rendering component variants
+  const templates = await loadTemplates(TEMPLATES_DIR)
 
   // iterate over all component packages under the source dir, excluding node_modules
   const globs = MATCH_PATHS.map(
