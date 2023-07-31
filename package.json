@@ -46,9 +46,9 @@
     "eslint-plugin-promise": "^4.2.1",
     "eslint-plugin-standard": "^4.0.1",
     "eslint-plugin-svelte3": "^2.7.3",
-    "svelte": "3.16.5"
+    "svelte": "^4.1.1"
   },
   "peerDependencies": {
-    "svelte": "^3.16.5"
+    "svelte": ">=4.x"
   }
 }
